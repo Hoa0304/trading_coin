@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, Portfolio, Transaction } from './lib/supabase';
+import { auth, portfolio as portfolioApi, transactions as transactionsApi, Portfolio, Transaction, User } from './lib/api';
 import { useBitcoinPrice } from './hooks/useBitcoinPrice';
 import { AuthForm } from './components/AuthForm';
 import { PriceChart } from './components/PriceChart';
@@ -7,7 +7,6 @@ import { PortfolioStats } from './components/PortfolioStats';
 import { TradePanel } from './components/TradePanel';
 import { TransactionHistory } from './components/TransactionHistory';
 import { Bitcoin, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
-import { User } from '@supabase/supabase-js';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,18 +16,20 @@ function App() {
   const { price, change24h, priceHistory } = useBitcoinPrice();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Kiểm tra token và lấy user
+    const checkAuth = async () => {
+      try {
+        const { user } = await auth.getCurrentUser();
+        setUser(user);
+      } catch (error) {
+        // Không có token hoặc token invalid
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-      })();
-    });
-
-    return () => subscription.unsubscribe();
+    checkAuth();
   }, []);
 
   useEffect(() => {
@@ -40,33 +41,31 @@ function App() {
   const loadUserData = async () => {
     if (!user) return;
 
-    const { data: portfolioData } = await supabase
-      .from('portfolios')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (portfolioData) {
+    try {
+      const portfolioData = await portfolioApi.get();
       setPortfolio(portfolioData);
-    }
 
-    const { data: transactionsData } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (transactionsData) {
+      const transactionsData = await transactionsApi.get(10);
       setTransactions(transactionsData);
+    } catch (error) {
+      console.error('Error loading user data:', error);
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+  const handleSignOut = () => {
+    auth.logout();
     setUser(null);
     setPortfolio(null);
     setTransactions([]);
+  };
+
+  const handleAuthComplete = async () => {
+    try {
+      const { user } = await auth.getCurrentUser();
+      setUser(user);
+    } catch (error) {
+      console.error('Error getting user after auth:', error);
+    }
   };
 
   if (loading) {
@@ -78,7 +77,7 @@ function App() {
   }
 
   if (!user) {
-    return <AuthForm onAuthComplete={() => {}} />;
+    return <AuthForm onAuthComplete={handleAuthComplete} />;
   }
 
   return (
@@ -94,13 +93,19 @@ function App() {
               <p className="text-gray-400 text-sm">Professional Trading Platform</p>
             </div>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 bg-[#1a1b1d] text-gray-300 px-4 py-2 rounded-lg hover:bg-[#242629] transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-white font-medium">{user.full_name || user.email}</p>
+              <p className="text-gray-400 text-xs">{user.email}</p>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 bg-[#1a1b1d] text-gray-300 px-4 py-2 rounded-lg hover:bg-[#242629] transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -142,7 +147,7 @@ function App() {
           <TradePanel
             currentPrice={price}
             portfolio={portfolio}
-            userId={user.id}
+            userId={user.id.toString()}
             onTradeComplete={loadUserData}
           />
           <TransactionHistory transactions={transactions} />

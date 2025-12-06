@@ -1,38 +1,58 @@
 # Bitcoin Trading Platform
 
-Ứng dụng web cho phép người dùng mua và bán Bitcoin với giá thời gian thực, theo dõi portfolio và lịch sử giao dịch.
+Ứng dụng web **mô phỏng giao dịch Bitcoin**, cho phép người dùng mua và bán Bitcoin với giá thời gian thực, theo dõi portfolio và lịch sử giao dịch.
+
+## ⚠️ Lưu Ý Quan Trọng
+
+**Đây KHÔNG phải là ứng dụng blockchain thật**, mà là một **Trading Simulator** (mô phỏng giao dịch):
+
+- ❌ **KHÔNG** kết nối với blockchain Bitcoin thật
+- ❌ **KHÔNG** sử dụng ví blockchain thật
+- ❌ **KHÔNG** thực hiện giao dịch trên blockchain
+- ✅ Chỉ mô phỏng giao dịch với dữ liệu lưu trong database
+- ✅ Giá Bitcoin được lấy từ CoinGecko API (giá thật)
+- ✅ Số dư và giao dịch chỉ tồn tại trong database của ứng dụng
+
+**Mục đích**: Học tập và thực hành trading Bitcoin trong môi trường an toàn, không rủi ro tài chính.
 
 ## Tính năng
 
-- ✅ Đăng ký/Đăng nhập người dùng với Supabase Auth
-- ✅ Xem giá Bitcoin thời gian thực với biểu đồ giá
-- ✅ **Mua Bitcoin**: Sử dụng số dư USD để mua Bitcoin
-- ✅ **Bán Bitcoin**: Bán Bitcoin để nhận USD
+- ✅ Đăng ký/Đăng nhập người dùng đơn giản (JWT Authentication)
+- ✅ Hiển thị thông tin user sau khi đăng nhập
+- ✅ Xem giá Bitcoin thời gian thực từ CoinGecko API với biểu đồ giá
+- ✅ **Mua Bitcoin**: Sử dụng số dư USD để mua Bitcoin (mô phỏng)
+- ✅ **Bán Bitcoin**: Bán Bitcoin để nhận USD (mô phỏng)
 - ✅ Theo dõi Portfolio (số dư BTC, USD, tổng giá trị)
 - ✅ Lịch sử giao dịch chi tiết
 - ✅ Validation đầy đủ và ACID compliance
+- ✅ Error handling và user feedback tốt
 
 ## Công nghệ sử dụng
 
 - **Frontend**: React + TypeScript + Vite
 - **Styling**: Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth + Realtime)
+- **Backend**: Express.js + SQLite
+- **Authentication**: JWT (JSON Web Token)
+- **Database**: SQLite (file-based, không cần server riêng)
 - **Icons**: Lucide React
-- **Bitcoin Price**: Mock data với giá cập nhật mỗi 3 giây
+- **Bitcoin Price API**: CoinGecko API (giá thật, cập nhật mỗi 30 giây)
 
 ## Yêu cầu hệ thống
 
 - Node.js >= 16.x
 - npm >= 8.x
-- Tài khoản Supabase (miễn phí)
+- **Không cần** Supabase hay database server riêng
 
 ## Hướng dẫn Setup
+
+> 📖 **Xem hướng dẫn nhanh**: [QUICK_START.md](./QUICK_START.md)  
+> 📖 **Xem hướng dẫn chi tiết**: [SETUP_SQLITE.md](./SETUP_SQLITE.md)
 
 ### Bước 1: Clone repository
 
 ```bash
 git clone <repository-url>
-cd project
+cd trading_coin
 ```
 
 ### Bước 2: Cài đặt dependencies
@@ -41,47 +61,38 @@ cd project
 npm install
 ```
 
-### Bước 3: Setup Supabase
+### Bước 3: Chạy ứng dụng
 
-1. Truy cập [Supabase](https://supabase.com) và tạo tài khoản (nếu chưa có)
-2. Tạo một project mới
-3. Vào **SQL Editor** và chạy migration file:
-   - File: `supabase/migrations/20251028063832_create_bitcoin_trading_tables.sql`
-   - Copy toàn bộ nội dung file và paste vào SQL Editor, sau đó click **Run**
+**⚠️ QUAN TRỌNG**: Ứng dụng cần **2 server** chạy cùng lúc:
+- Backend server (Express + SQLite) - Port 3001
+- Frontend server (Vite) - Port 5173
 
-### Bước 4: Lấy Supabase Credentials
+#### Cách 1: Chạy cả 2 cùng lúc (Khuyến nghị)
 
-1. Vào **Settings** > **API** trong Supabase Dashboard
-2. Copy các thông tin sau:
-   - **Project URL** (Project URL)
-   - **anon/public key** (API Key - anon public)
-
-### Bước 5: Tạo file .env
-
-Tạo file `.env` ở root của project với nội dung:
-
-```env
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```bash
+npm run dev:all
 ```
 
-**Lưu ý**: Thay thế `your_supabase_project_url` và `your_supabase_anon_key` bằng giá trị thực từ Supabase Dashboard.
+Lệnh này sẽ tự động chạy cả backend và frontend.
 
-Ví dụ:
-```env
-VITE_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+#### Cách 2: Chạy riêng (2 terminal)
+
+**Terminal 1 - Backend:**
+```bash
+npm run dev:server
 ```
 
-### Bước 6: Chạy ứng dụng
-
-#### Development mode
-
+**Terminal 2 - Frontend:**
 ```bash
 npm run dev
 ```
 
-Ứng dụng sẽ chạy tại: `http://localhost:5173`
+### Bước 4: Truy cập ứng dụng
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:3001`
+
+**Lưu ý**: Database SQLite sẽ được tạo tự động tại `server/database.sqlite` khi chạy backend lần đầu.
 
 #### Build production
 
@@ -91,29 +102,30 @@ npm run build
 
 Build files sẽ được tạo trong thư mục `dist/`
 
-#### Preview production build
-
-```bash
-npm run preview
-```
+**Lưu ý**: Sau khi build, vẫn cần chạy backend server để API hoạt động.
 
 ## Hướng dẫn sử dụng
 
+> 📖 **Xem hướng dẫn chi tiết**: [HUONG_DAN_SU_DUNG.md](./HUONG_DAN_SU_DUNG.md)
+
 ### Đăng ký tài khoản
 
-1. Mở ứng dụng trong trình duyệt
-2. Click vào "Don't have an account? Sign up"
-3. Nhập đầy đủ thông tin:
-   - **Full Name**: Tên đầy đủ
-   - **Email**: Email hợp lệ
-   - **Password**: Mật khẩu (tối thiểu 6 ký tự)
-4. Click **Sign Up**
+1. Mở ứng dụng trong trình duyệt: `http://localhost:5173`
+2. Click vào **"Chưa có tài khoản? Đăng ký"**
+3. Nhập thông tin:
+   - **Tên** (Tùy chọn): Tên của bạn
+   - **Email**: Email của bạn
+   - **Mật khẩu**: Mật khẩu (bất kỳ)
+4. Click **Đăng ký**
 5. Tài khoản mới sẽ được tạo với **$10,000 USD** và **0 BTC** làm số dư ban đầu
+6. Tự động đăng nhập và chuyển đến trang chính
+7. **Thông tin user** (email/tên) sẽ hiển thị ở header
 
 ### Đăng nhập
 
-1. Nhập **Email** và **Password**
-2. Click **Sign In**
+1. Nhập **Email** và **Mật khẩu**
+2. Click **Đăng nhập**
+3. Sau khi đăng nhập, **thông tin user** sẽ hiển thị ở header
 
 ### Mua Bitcoin
 
@@ -159,7 +171,10 @@ Phần **Transaction History** hiển thị 10 giao dịch gần nhất với:
 ## Cấu trúc dự án
 
 ```
-project/
+trading_coin/
+├── server/
+│   ├── index.js             # Backend Express server
+│   └── database.sqlite      # SQLite database (tự động tạo)
 ├── src/
 │   ├── components/          # React components
 │   │   ├── AuthForm.tsx     # Form đăng ký/đăng nhập
@@ -170,11 +185,9 @@ project/
 │   ├── hooks/
 │   │   └── useBitcoinPrice.ts # Hook lấy giá Bitcoin
 │   ├── lib/
-│   │   └── supabase.ts      # Supabase client và types
+│   │   └── api.ts           # API client (thay thế Supabase)
 │   ├── App.tsx              # Component chính
 │   └── main.tsx             # Entry point
-├── supabase/
-│   └── migrations/          # Database migrations
 ├── package.json
 ├── vite.config.ts
 └── tailwind.config.js
@@ -201,22 +214,25 @@ project/
 
 ### Security
 
-- **Row Level Security (RLS)**: Tất cả tables có RLS enabled
-- **Authentication**: Chỉ user đã đăng nhập mới có thể giao dịch
+- **JWT Authentication**: Token-based authentication
+- **Password Hashing**: Sử dụng bcrypt để hash password
+- **API Protection**: Tất cả API endpoints (trừ login/register) yêu cầu JWT token
 - **Data Isolation**: Mỗi user chỉ xem và thao tác với dữ liệu của mình
 
 ## Troubleshooting
 
-### Lỗi "Invalid API key" hoặc "Failed to fetch"
+### Lỗi "ERR_CONNECTION_REFUSED"
 
-- Kiểm tra file `.env` đã được tạo đúng chưa
-- Kiểm tra `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` đúng chưa
-- Restart dev server sau khi thay đổi `.env`
+**Nguyên nhân**: Backend server chưa chạy
+
+**Giải pháp**: 
+- Chạy `npm run dev:server` trong terminal riêng
+- Hoặc chạy `npm run dev:all` để chạy cả 2 server
 
 ### Lỗi "Portfolio not found"
 
-- Đảm bảo đã chạy migration file trong Supabase
-- Kiểm tra RLS policies đã được tạo đúng chưa
+- Database sẽ tự động tạo khi chạy backend lần đầu
+- Đảm bảo backend server đang chạy
 - Đăng xuất và đăng nhập lại
 
 ### Lỗi "Insufficient balance"
@@ -237,9 +253,10 @@ Kiểm tra lỗi và sửa theo thông báo. Thường gặp:
 
 ## Scripts
 
-- `npm run dev`: Chạy development server
-- `npm run build`: Build production
-- `npm run preview`: Preview production build
+- `npm run dev`: Chạy frontend development server (port 5173)
+- `npm run dev:server`: Chạy backend server (port 3001)
+- `npm run dev:all`: Chạy cả frontend và backend cùng lúc
+- `npm run build`: Build production frontend
 - `npm run lint`: Chạy ESLint
 - `npm run typecheck`: Kiểm tra TypeScript types
 

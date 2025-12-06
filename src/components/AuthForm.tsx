@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/api';
 import { Bitcoin } from 'lucide-react';
 
 interface AuthFormProps {
@@ -14,6 +14,9 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  /**
+   * Xử lý đăng nhập/đăng ký đơn giản - chỉ cần email và password
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -21,39 +24,26 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+        // Đăng nhập
+        await auth.login(email.trim(), password);
+        // Đăng nhập thành công
+        onAuthComplete();
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-
-        if (data.user) {
-          await supabase.from('profiles').insert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-          });
-
-          await supabase.from('portfolios').insert({
-            user_id: data.user.id,
-            btc_balance: 0,
-            usd_balance: 10000,
-          });
-        }
+        // Đăng ký
+        await auth.register(email.trim(), password, fullName.trim() || undefined);
+        // Đăng ký thành công - tự động đăng nhập
+        onAuthComplete();
       }
-      onAuthComplete();
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra. Vui lòng thử lại.';
+      if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
+        setError('Email này đã được đăng ký. Vui lòng đăng nhập.');
+      } else if (errorMessage.includes('Invalid email or password')) {
+        setError('Email hoặc mật khẩu không đúng');
       } else {
-        setError('An error occurred');
+        setError(errorMessage);
       }
+      console.error('Auth error:', err);
     } finally {
       setLoading(false);
     }
@@ -72,18 +62,18 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
           Bitcoin Trading Platform
         </h1>
         <p className="text-gray-400 text-center mb-8">
-          {isLogin ? 'Sign in to your account' : 'Create a new account'}
+          {isLogin ? 'Đăng nhập' : 'Tạo tài khoản mới'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Full Name</label>
+              <label className="block text-gray-400 text-sm mb-2">Tên (Tùy chọn)</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                required
+                placeholder="Nhập tên của bạn"
                 className="w-full bg-[#1a1b1d] text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F263B0] transition-all"
               />
             </div>
@@ -95,19 +85,20 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@example.com"
               required
               className="w-full bg-[#1a1b1d] text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F263B0] transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-gray-400 text-sm mb-2">Password</label>
+            <label className="block text-gray-400 text-sm mb-2">Mật khẩu</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Nhập mật khẩu"
               required
-              minLength={6}
               className="w-full bg-[#1a1b1d] text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F263B0] transition-all"
             />
           </div>
@@ -123,7 +114,7 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
             disabled={loading}
             className="w-full bg-[#F263B0] text-white py-4 rounded-lg font-semibold hover:bg-[#e055a0] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#F263B0]/30 hover:shadow-[#F263B0]/50"
           >
-            {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
+            {loading ? 'Đang xử lý...' : isLogin ? 'Đăng nhập' : 'Đăng ký'}
           </button>
         </form>
 
@@ -132,10 +123,13 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
+              setEmail('');
+              setPassword('');
+              setFullName('');
             }}
             className="text-[#F263B0] hover:text-[#e055a0] font-medium transition-colors"
           >
-            {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+            {isLogin ? 'Chưa có tài khoản? Đăng ký' : 'Đã có tài khoản? Đăng nhập'}
           </button>
         </div>
       </div>

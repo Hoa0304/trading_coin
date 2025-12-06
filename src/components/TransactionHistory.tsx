@@ -1,4 +1,4 @@
-import { Transaction } from '../lib/supabase';
+import { Transaction } from '../lib/api';
 import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 interface TransactionHistoryProps {

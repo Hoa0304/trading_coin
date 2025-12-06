@@ -1,4 +1,4 @@
-import { Portfolio } from '../lib/supabase';
+import { Portfolio } from '../lib/api';
 import { Wallet, TrendingUp, DollarSign } from 'lucide-react';
 
 interface PortfolioStatsProps {

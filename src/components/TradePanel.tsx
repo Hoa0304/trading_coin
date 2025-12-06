@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase, Portfolio } from '../lib/supabase';
+import { portfolio as portfolioApi, transactions as transactionsApi, Portfolio } from '../lib/api';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TradePanelProps {
@@ -81,57 +81,35 @@ export function TradePanel({ currentPrice, portfolio, userId, onTradeComplete }:
       // Ở đây Supabase tự động đảm bảo ACID cho mỗi operation riêng lẻ
       // Nhưng chúng ta cần thực hiện theo thứ tự: cập nhật portfolio trước, sau đó tạo transaction
 
-      // Bước 1: Cập nhật portfolio (atomic operation)
-      let updateData;
+      // Tính toán số dư mới
+      let newBtcBalance: number;
+      let newUsdBalance: number;
+
       if (activeTab === 'buy') {
-        updateData = {
-          btc_balance: parseFloat((portfolio.btc_balance + btcAmount).toFixed(8)),
-          usd_balance: parseFloat((portfolio.usd_balance - usdAmount).toFixed(2)),
-          updated_at: new Date().toISOString(),
-        };
+        newBtcBalance = parseFloat((portfolio.btc_balance + btcAmount).toFixed(8));
+        newUsdBalance = parseFloat((portfolio.usd_balance - usdAmount).toFixed(2));
       } else {
-        updateData = {
-          btc_balance: parseFloat((portfolio.btc_balance - btcAmount).toFixed(8)),
-          usd_balance: parseFloat((portfolio.usd_balance + usdAmount).toFixed(2)),
-          updated_at: new Date().toISOString(),
-        };
+        newBtcBalance = parseFloat((portfolio.btc_balance - btcAmount).toFixed(8));
+        newUsdBalance = parseFloat((portfolio.usd_balance + usdAmount).toFixed(2));
       }
 
       // Validation: Đảm bảo số dư không âm sau khi cập nhật
-      if (updateData.btc_balance < 0 || updateData.usd_balance < 0) {
+      if (newBtcBalance < 0 || newUsdBalance < 0) {
         alert('Invalid balance after transaction');
         setLoading(false);
         return;
       }
 
-      const { error: updateError } = await supabase
-        .from('portfolios')
-        .update(updateData)
-        .eq('user_id', userId);
+      // Bước 1: Tạo transaction record
+      await transactionsApi.create(
+        activeTab,
+        parseFloat(btcAmount.toFixed(8)),
+        parseFloat(usdAmount.toFixed(2)),
+        parseFloat(currentPrice.toFixed(2))
+      );
 
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Bước 2: Tạo transaction record (atomic operation)
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: userId,
-          type: activeTab,
-          btc_amount: parseFloat(btcAmount.toFixed(8)),
-          usd_amount: parseFloat(usdAmount.toFixed(2)),
-          btc_price: parseFloat(currentPrice.toFixed(2)),
-          status: 'completed',
-        });
-
-      if (transactionError) {
-        // Nếu tạo transaction thất bại, cần rollback portfolio
-        // Tuy nhiên Supabase không hỗ trợ transaction multi-table natively
-        // Có thể sử dụng database function hoặc chấp nhận inconsistency nhỏ
-        // Ở đây chúng ta sẽ throw error để người dùng biết
-        throw transactionError;
-      }
+      // Bước 2: Cập nhật portfolio
+      await portfolioApi.update(newBtcBalance, newUsdBalance);
 
       // Thành công: Reset form và reload data
       setAmount('');
