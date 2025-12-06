@@ -1,16 +1,20 @@
-import { Portfolio } from '../lib/api';
 import { Wallet, TrendingUp, DollarSign } from 'lucide-react';
 
+interface BlockchainPortfolio {
+  btcBalance: number;
+  usdBalance: number;
+}
+
 interface PortfolioStatsProps {
-  portfolio: Portfolio | null;
+  portfolio: BlockchainPortfolio | null;
   currentPrice: number;
 }
 
 export function PortfolioStats({ portfolio, currentPrice }: PortfolioStatsProps) {
   if (!portfolio) return null;
 
-  const btcValue = portfolio.btc_balance * currentPrice;
-  const totalValue = btcValue + portfolio.usd_balance;
+  const btcValue = portfolio.btcBalance * currentPrice;
+  const totalValue = btcValue + portfolio.usdBalance;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -31,7 +35,7 @@ export function PortfolioStats({ portfolio, currentPrice }: PortfolioStatsProps)
           </div>
           <h3 className="text-gray-400 text-sm font-medium">Bitcoin Holdings</h3>
         </div>
-        <p className="text-3xl font-bold text-white">{portfolio.btc_balance.toFixed(8)}</p>
+        <p className="text-3xl font-bold text-white">{portfolio.btcBalance.toFixed(8)}</p>
         <p className="text-gray-400 text-sm mt-1">${btcValue.toFixed(2)} USD</p>
       </div>
 
@@ -42,7 +46,7 @@ export function PortfolioStats({ portfolio, currentPrice }: PortfolioStatsProps)
           </div>
           <h3 className="text-gray-400 text-sm font-medium">Cash Balance</h3>
         </div>
-        <p className="text-3xl font-bold text-white">${portfolio.usd_balance.toFixed(2)}</p>
+        <p className="text-3xl font-bold text-white">${portfolio.usdBalance.toFixed(2)}</p>
       </div>
     </div>
   );

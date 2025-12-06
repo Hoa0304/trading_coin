@@ -1,74 +1,67 @@
 import { useEffect, useState } from 'react';
-import { auth, portfolio as portfolioApi, transactions as transactionsApi, Portfolio, Transaction, User } from './lib/api';
+import { useWallet } from './contexts/WalletContext';
 import { useBitcoinPrice } from './hooks/useBitcoinPrice';
-import { AuthForm } from './components/AuthForm';
+import { ConnectWallet } from './components/ConnectWallet';
 import { PriceChart } from './components/PriceChart';
 import { PortfolioStats } from './components/PortfolioStats';
 import { TradePanel } from './components/TradePanel';
 import { TransactionHistory } from './components/TransactionHistory';
-import { Bitcoin, LogOut, TrendingUp, TrendingDown } from 'lucide-react';
+import { getPortfolio, getUserTransactions } from './lib/contract';
+import { Bitcoin, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+
+interface BlockchainPortfolio {
+  btcBalance: number;
+  usdBalance: number;
+}
+
+interface BlockchainTransaction {
+  type: 'buy' | 'sell';
+  btcAmount: number;
+  usdAmount: number;
+  btcPrice: number;
+  timestamp: number;
+}
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { address, isConnected, isLoading, formattedAddress, refreshBalance } = useWallet();
+  const [portfolio, setPortfolio] = useState<BlockchainPortfolio | null>(null);
+  const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const { price, change24h, priceHistory } = useBitcoinPrice();
 
   useEffect(() => {
-    // Kiểm tra token và lấy user
-    const checkAuth = async () => {
-      try {
-        const { user } = await auth.getCurrentUser();
-        setUser(user);
-      } catch (error) {
-        // Không có token hoặc token invalid
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadUserData();
+    if (isConnected && address) {
+      loadBlockchainData();
+    } else {
+      setPortfolio(null);
+      setTransactions([]);
     }
-  }, [user]);
+  }, [isConnected, address]);
 
-  const loadUserData = async () => {
-    if (!user) return;
+  const loadBlockchainData = async () => {
+    if (!address) return;
 
+    setLoadingPortfolio(true);
     try {
-      const portfolioData = await portfolioApi.get();
+      // Load portfolio từ blockchain
+      const portfolioData = await getPortfolio(address);
       setPortfolio(portfolioData);
 
-      const transactionsData = await transactionsApi.get(10);
+      // Load transactions từ blockchain
+      const transactionsData = await getUserTransactions(address, 10);
       setTransactions(transactionsData);
+
+      // Refresh ETH balance
+      await refreshBalance();
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('Error loading blockchain data:', error);
+      // Nếu contract chưa được deploy, portfolio sẽ null
+    } finally {
+      setLoadingPortfolio(false);
     }
   };
 
-  const handleSignOut = () => {
-    auth.logout();
-    setUser(null);
-    setPortfolio(null);
-    setTransactions([]);
-  };
-
-  const handleAuthComplete = async () => {
-    try {
-      const { user } = await auth.getCurrentUser();
-      setUser(user);
-    } catch (error) {
-      console.error('Error getting user after auth:', error);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#1a1b1d] flex items-center justify-center">
         <div className="text-[#F263B0] text-xl">Loading...</div>
@@ -76,8 +69,12 @@ function App() {
     );
   }
 
-  if (!user) {
-    return <AuthForm onAuthComplete={handleAuthComplete} />;
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-[#1a1b1d] flex items-center justify-center p-4">
+        <ConnectWallet />
+      </div>
+    );
   }
 
   return (
@@ -94,17 +91,13 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-white font-medium">{user.full_name || user.email}</p>
-              <p className="text-gray-400 text-xs">{user.email}</p>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+              <Wallet className="w-4 h-4 text-green-400" />
+              <div className="text-right">
+                <p className="text-green-400 text-sm font-medium">Connected</p>
+                <p className="text-gray-400 text-xs">{formattedAddress}</p>
+              </div>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 bg-[#1a1b1d] text-gray-300 px-4 py-2 rounded-lg hover:bg-[#242629] transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
           </div>
         </div>
       </header>
@@ -141,17 +134,25 @@ function App() {
           </div>
         </div>
 
-        <PortfolioStats portfolio={portfolio} currentPrice={price} />
+        {loadingPortfolio ? (
+          <div className="text-center py-8">
+            <div className="text-[#F263B0] text-lg">Loading portfolio from blockchain...</div>
+          </div>
+        ) : (
+          <>
+            <PortfolioStats portfolio={portfolio} currentPrice={price} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TradePanel
-            currentPrice={price}
-            portfolio={portfolio}
-            userId={user.id.toString()}
-            onTradeComplete={loadUserData}
-          />
-          <TransactionHistory transactions={transactions} />
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TradePanel
+                currentPrice={price}
+                portfolio={portfolio}
+                address={address!}
+                onTradeComplete={loadBlockchainData}
+              />
+              <TransactionHistory transactions={transactions} />
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

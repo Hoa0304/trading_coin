@@ -1,22 +1,30 @@
-import { Transaction } from '../lib/api';
 import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
+interface BlockchainTransaction {
+  type: 'buy' | 'sell';
+  btcAmount: number;
+  usdAmount: number;
+  btcPrice: number;
+  timestamp: number;
+}
+
 interface TransactionHistoryProps {
-  transactions: Transaction[];
+  transactions: BlockchainTransaction[];
 }
 
 export function TransactionHistory({ transactions }: TransactionHistoryProps) {
   return (
     <div className="bg-[#2F3133] rounded-xl p-6 shadow-xl">
       <h2 className="text-xl font-bold text-white mb-4">Recent Transactions</h2>
+      <p className="text-gray-400 text-xs mb-4">From blockchain</p>
 
       <div className="space-y-3">
         {transactions.length === 0 ? (
           <p className="text-gray-400 text-center py-8">No transactions yet</p>
         ) : (
-          transactions.map((tx) => (
+          transactions.map((tx, index) => (
             <div
-              key={tx.id}
+              key={index}
               className="bg-[#1a1b1d] rounded-lg p-4 flex items-center justify-between hover:bg-[#242629] transition-colors"
             >
               <div className="flex items-center gap-3">
@@ -27,19 +35,19 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
                 )}
                 <div>
                   <p className="text-white font-semibold">
-                    {tx.type === 'buy' ? 'Bought' : 'Sold'} {tx.btc_amount.toFixed(8)} BTC
+                    {tx.type === 'buy' ? 'Bought' : 'Sold'} {tx.btcAmount.toFixed(8)} BTC
                   </p>
                   <p className="text-gray-400 text-sm">
-                    {new Date(tx.created_at).toLocaleString()}
+                    {new Date(tx.timestamp).toLocaleString()}
                   </p>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-white font-semibold">
-                  ${tx.usd_amount.toFixed(2)}
+                  ${tx.usdAmount.toFixed(2)}
                 </p>
                 <p className="text-gray-400 text-sm">
-                  @${tx.btc_price.toFixed(2)}
+                  @${tx.btcPrice.toFixed(2)}
                 </p>
               </div>
             </div>
