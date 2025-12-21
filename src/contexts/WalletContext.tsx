@@ -7,6 +7,8 @@ import {
   onChainChanged,
   isMetaMaskInstalled,
   formatAddress,
+  isLocalNetwork,
+  checkRpcEndpoint,
 } from '../lib/web3';
 
 interface WalletContextType {
@@ -99,10 +101,31 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
 
   const loadBalance = async (addr: string) => {
     try {
+      // Kiểm tra RPC endpoint nếu đang ở local network
+      const isLocal = await isLocalNetwork();
+      if (isLocal) {
+        const rpcOk = await checkRpcEndpoint();
+        if (!rpcOk) {
+          setError('RPC endpoint is not responding. Please ensure Hardhat node is running: `npx hardhat node`');
+          return;
+        }
+      }
+      
       const bal = await getBalance(addr);
       setBalance(bal);
-    } catch (err) {
+      setError(null); // Clear error on success
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; code?: number; data?: { code?: number; message?: string } };
       console.error('Error loading balance:', err);
+      
+      // Provide helpful error messages
+      if (errorObj?.code === -32002 || errorObj?.data?.code === -32002) {
+        setError('RPC endpoint is returning too many errors. Please ensure Hardhat node is running: `npx hardhat node`');
+      } else if (errorObj?.message?.includes('RPC endpoint returned too many errors')) {
+        setError('RPC endpoint is returning too many errors. Please ensure Hardhat node is running: `npx hardhat node`');
+      } else {
+        setError(errorObj?.message || 'Failed to load balance');
+      }
     }
   };
 
@@ -110,11 +133,28 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     try {
       setError(null);
       setIsLoading(true);
+      
+      // Kiểm tra RPC endpoint nếu đang ở local network
+      const isLocal = await isLocalNetwork();
+      if (isLocal) {
+        const rpcOk = await checkRpcEndpoint();
+        if (!rpcOk) {
+          const errorMsg = 'RPC endpoint is not responding. Please ensure Hardhat node is running: `npx hardhat node`';
+          setError(errorMsg);
+          throw new Error(errorMsg);
+        }
+      }
+      
       const addr = await connectWallet();
       setAddress(addr);
       await loadBalance(addr);
-    } catch (err: any) {
-      setError(err.message || 'Failed to connect wallet');
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; code?: number; data?: { code?: number; message?: string } };
+      const errorMessage = 
+        errorObj?.code === -32002 || errorObj?.data?.code === -32002
+          ? 'RPC endpoint is returning too many errors. Please ensure Hardhat node is running: `npx hardhat node`'
+          : errorObj?.message || 'Failed to connect wallet';
+      setError(errorMessage);
       throw err;
     } finally {
       setIsLoading(false);

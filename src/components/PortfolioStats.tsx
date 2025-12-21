@@ -11,10 +11,12 @@ interface PortfolioStatsProps {
 }
 
 export function PortfolioStats({ portfolio, currentPrice }: PortfolioStatsProps) {
-  if (!portfolio) return null;
-
-  const btcValue = portfolio.btcBalance * currentPrice;
-  const totalValue = btcValue + portfolio.usdBalance;
+  // Hiển thị ngay cả khi portfolio chưa được khởi tạo (sẽ hiển thị 0)
+  const btcBalance = portfolio?.btcBalance || 0;
+  const usdBalance = portfolio?.usdBalance || 0;
+  
+  const btcValue = btcBalance * currentPrice;
+  const totalValue = btcValue + usdBalance;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -35,7 +37,7 @@ export function PortfolioStats({ portfolio, currentPrice }: PortfolioStatsProps)
           </div>
           <h3 className="text-gray-400 text-sm font-medium">Bitcoin Holdings</h3>
         </div>
-        <p className="text-3xl font-bold text-white">{portfolio.btcBalance.toFixed(8)}</p>
+        <p className="text-3xl font-bold text-white">{btcBalance.toFixed(8)}</p>
         <p className="text-gray-400 text-sm mt-1">${btcValue.toFixed(2)} USD</p>
       </div>
 
@@ -46,7 +48,7 @@ export function PortfolioStats({ portfolio, currentPrice }: PortfolioStatsProps)
           </div>
           <h3 className="text-gray-400 text-sm font-medium">Cash Balance</h3>
         </div>
-        <p className="text-3xl font-bold text-white">${portfolio.usdBalance.toFixed(2)}</p>
+        <p className="text-3xl font-bold text-white">${usdBalance.toFixed(2)}</p>
       </div>
     </div>
   );

@@ -12,12 +12,29 @@ async function main() {
   console.log("🚀 Starting deployment...\n");
 
   // Lấy deployer account
-  const [deployer] = await hre.ethers.getSigners();
+  const signers = await hre.ethers.getSigners();
+  
+  if (signers.length === 0) {
+    console.error("❌ No accounts found!");
+    console.error("Please check your .env file:");
+    console.error("1. PRIVATE_KEY must be set (66 characters, starting with 0x)");
+    console.error("2. INFURA_API_KEY must be set");
+    console.error("3. Make sure there are no spaces or quotes around the values");
+    process.exit(1);
+  }
+
+  const deployer = signers[0];
   console.log("📝 Deploying contracts with account:", deployer.address);
   
   // Kiểm tra balance
   const balance = await hre.ethers.provider.getBalance(deployer.address);
   console.log("💰 Account balance:", hre.ethers.formatEther(balance), "ETH\n");
+  
+  // Kiểm tra balance có đủ không (ít nhất 0.001 ETH)
+  if (balance < hre.ethers.parseEther("0.001")) {
+    console.warn("⚠️  Warning: Balance is very low. You may need more ETH for gas fees.");
+    console.warn("   Get free Sepolia ETH from: https://sepoliafaucet.com/\n");
+  }
 
   // Deploy contract
   console.log("📦 Deploying BitcoinTrading contract...");
@@ -30,6 +47,16 @@ async function main() {
   // Lấy contract address
   const address = await bitcoinTrading.getAddress();
   console.log("✅ BitcoinTrading deployed to:", address);
+  
+  // Verify contract code exists
+  const code = await hre.ethers.provider.getCode(address);
+  if (code === "0x" || code.length < 100) {
+    console.error("❌ WARNING: Contract code is empty or invalid!");
+    console.error("   This might mean the contract wasn't actually deployed.");
+    console.error("   Code length:", code.length);
+  } else {
+    console.log("✅ Contract code verified! Code length:", code.length, "characters");
+  }
 
   // Hiển thị network info
   const network = await hre.ethers.provider.getNetwork();

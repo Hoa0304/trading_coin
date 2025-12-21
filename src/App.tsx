@@ -53,9 +53,19 @@ function App() {
 
       // Refresh ETH balance
       await refreshBalance();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading blockchain data:', error);
-      // Nếu contract chưa được deploy, portfolio sẽ null
+      
+      // Kiểm tra nếu là lỗi RPC endpoint
+      if (error.message?.includes('RPC endpoint') || error.message?.includes('Hardhat node')) {
+        // Không set portfolio để hiển thị thông báo lỗi
+        setPortfolio(null);
+        setTransactions([]);
+      } else {
+        // Nếu contract chưa được deploy, portfolio sẽ null
+        setPortfolio(null);
+        setTransactions([]);
+      }
     } finally {
       setLoadingPortfolio(false);
     }
@@ -141,6 +151,32 @@ function App() {
         ) : (
           <>
             <PortfolioStats portfolio={portfolio} currentPrice={price} />
+            
+            {!portfolio && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                <p className="text-yellow-400 text-sm">
+                  ⚠️ Portfolio chưa được khởi tạo. Hãy mua/bán Bitcoin để khởi tạo portfolio với $10,000 USD.
+                </p>
+              </div>
+            )}
+            
+            {/* Hiển thị thông báo nếu Hardhat node không chạy */}
+            {loadingPortfolio === false && !portfolio && address && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
+                <p className="text-red-400 text-sm font-medium mb-2">
+                  ❌ Không thể kết nối đến Hardhat node
+                </p>
+                <p className="text-red-300 text-xs mb-2">
+                  Vui lòng đảm bảo Hardhat node đang chạy:
+                </p>
+                <code className="block bg-[#1a1b1d] text-red-300 text-xs p-2 rounded mt-2">
+                  npx hardhat node
+                </code>
+                <p className="text-red-300 text-xs mt-2">
+                  Sau đó reload trang này.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <TradePanel

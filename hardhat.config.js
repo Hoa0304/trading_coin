@@ -15,14 +15,28 @@ export default {
   networks: {
     // Sepolia testnet
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL || `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      // Hỗ trợ cả Infura và Alchemy
+      url: process.env.SEPOLIA_RPC_URL || 
+           (process.env.ALCHEMY_API_KEY 
+             ? `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+             : `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`),
+      // Chỉ thêm account nếu private key hợp lệ (66 ký tự, bắt đầu bằng 0x)
+      accounts: process.env.PRIVATE_KEY && 
+                process.env.PRIVATE_KEY.trim().length === 66 && 
+                process.env.PRIVATE_KEY.trim().startsWith('0x')
+        ? [process.env.PRIVATE_KEY.trim()] 
+        : [],
       chainId: 11155111,
     },
     // Ethereum mainnet (chỉ dùng khi deploy production)
     mainnet: {
       url: process.env.MAINNET_RPC_URL || `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      // Chỉ thêm account nếu private key hợp lệ
+      accounts: process.env.PRIVATE_KEY && 
+                process.env.PRIVATE_KEY.trim().length === 66 && 
+                process.env.PRIVATE_KEY.trim().startsWith('0x')
+        ? [process.env.PRIVATE_KEY.trim()] 
+        : [],
       chainId: 1,
     },
     // Hardhat local network (để test)

@@ -34,18 +34,43 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
       setTxHash(tx.hash);
       setStatus('confirming');
       
-      await waitForTransaction(tx);
-      setStatus('success');
-      onTradeComplete();
+      const receipt = await waitForTransaction(tx);
       
-      setTimeout(() => {
-        setStatus('idle');
-        setTxHash(null);
-      }, 3000);
+      if (receipt.status === 1) {
+        setStatus('success');
+        
+        // Đợi một chút để blockchain state được cập nhật
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Reload portfolio sau khi khởi tạo
+        await onTradeComplete();
+        
+        // Reload lại một lần nữa sau 1 giây để đảm bảo
+        setTimeout(async () => {
+          await onTradeComplete();
+        }, 1000);
+        
+        setTimeout(() => {
+          setStatus('idle');
+          setTxHash(null);
+        }, 2000);
+      } else {
+        throw new Error('Transaction failed');
+      }
     } catch (error: any) {
       console.error('Initialize error:', error);
       setStatus('error');
-      alert(`Failed to initialize portfolio: ${error.message || 'Unknown error'}`);
+      
+      let errorMessage = 'Khởi tạo portfolio thất bại';
+      if (error.message?.includes('user rejected') || error.code === 4001) {
+        errorMessage = 'Bạn đã từ chối giao dịch';
+      } else if (error.message?.includes('already initialized')) {
+        errorMessage = 'Portfolio đã được khởi tạo rồi';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
       setTimeout(() => setStatus('idle'), 3000);
     } finally {
       setLoading(false);
@@ -58,11 +83,33 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
   const handleTrade = async () => {
     // Nếu chưa có portfolio, khởi tạo trước
     if (!portfolio || (portfolio.btcBalance === 0 && portfolio.usdBalance === 0)) {
-      const shouldInit = confirm('Portfolio not initialized. Initialize with $10,000 USD?');
+      const shouldInit = window.confirm('Portfolio chưa được khởi tạo. Bạn có muốn khởi tạo với $10,000 USD không?');
       if (shouldInit) {
-        await handleInitializePortfolio();
+        try {
+          await handleInitializePortfolio();
+          // Sau khi khởi tạo, reload portfolio
+          await onTradeComplete();
+          // Đợi một chút để blockchain state được cập nhật
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Reload lại một lần nữa để đảm bảo
+          await onTradeComplete();
+          
+          // Nếu user đã nhập amount, tiếp tục với trade
+          if (amount && parseFloat(amount) > 0) {
+            // Portfolio đã được khởi tạo, tiếp tục với trade
+            // Không return, để code tiếp tục xuống phần trade
+          } else {
+            // Nếu chưa nhập amount, chỉ cần thông báo
+            alert('Portfolio đã được khởi tạo với $10,000 USD. Bây giờ bạn có thể nhập số lượng BTC muốn mua và bấm "Buy Bitcoin" lại.');
+            return;
+          }
+        } catch (error) {
+          console.error('Error initializing portfolio:', error);
+          return;
+        }
+      } else {
+        return;
       }
-      return;
     }
 
     // Validation
@@ -73,7 +120,7 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
     }
 
     if (!currentPrice || currentPrice <= 0) {
-      alert('Invalid Bitcoin price. Please try again.');
+      alert('Giá Bitcoin chưa sẵn sàng. Vui lòng đợi một chút và thử lại.');
       return;
     }
 
@@ -125,7 +172,17 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
       if (receipt.status === 1) {
         setStatus('success');
         setAmount('');
-        onTradeComplete();
+        
+        // Đợi một chút để blockchain state được cập nhật
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Reload portfolio và transactions
+        await onTradeComplete();
+        
+        // Reload lại một lần nữa sau 1 giây để đảm bảo data được cập nhật
+        setTimeout(async () => {
+          await onTradeComplete();
+        }, 1000);
         
         setTimeout(() => {
           setStatus('idle');
@@ -138,11 +195,22 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
       console.error('Trade error:', error);
       setStatus('error');
       
-      let errorMessage = 'Trade failed';
-      if (error.message?.includes('user rejected')) {
-        errorMessage = 'Transaction rejected by user';
-      } else if (error.message?.includes('insufficient funds')) {
-        errorMessage = 'Insufficient funds for transaction';
+      let errorMessage = 'Giao dịch thất bại';
+      
+      // Xử lý các loại lỗi cụ thể
+      if (error.message?.includes('user rejected') || error.code === 4001) {
+        errorMessage = 'Bạn đã từ chối giao dịch';
+      } else if (error.message?.includes('insufficient funds') || error.message?.includes('Insufficient')) {
+        errorMessage = error.message || 'Số dư không đủ';
+      } else if (error.message?.includes('Portfolio chưa được khởi tạo') || error.message?.includes('not initialized')) {
+        errorMessage = 'Portfolio chưa được khởi tạo. Vui lòng khởi tạo trước khi giao dịch.';
+      } else if (error.message?.includes('execution reverted') || error.code === 'CALL_EXCEPTION') {
+        // Lỗi từ smart contract
+        if (error.reason) {
+          errorMessage = `Lỗi từ smart contract: ${error.reason}`;
+        } else {
+          errorMessage = 'Giao dịch bị từ chối bởi smart contract. Có thể portfolio chưa được khởi tạo hoặc số dư không đủ.';
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -154,7 +222,10 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
     }
   };
 
-  const estimatedCost = amount ? (parseFloat(amount) * currentPrice).toFixed(2) : '0.00';
+  // Tính toán giá trị ước tính, xử lý trường hợp currentPrice = 0 hoặc không hợp lệ
+  const estimatedCost = amount && currentPrice > 0 
+    ? (parseFloat(amount) * currentPrice).toFixed(2) 
+    : '0.00';
 
   return (
     <div className="bg-[#2F3133] rounded-xl p-6 shadow-xl">
@@ -199,12 +270,19 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
         <div className="bg-[#1a1b1d] rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Price per BTC</span>
-            <span className="text-white font-medium">${currentPrice.toFixed(2)}</span>
+            <span className="text-white font-medium">
+              {currentPrice > 0 ? `$${currentPrice.toFixed(2)}` : 'Loading...'}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Estimated {activeTab === 'buy' ? 'Cost' : 'Return'}</span>
             <span className="text-white font-medium">${estimatedCost}</span>
           </div>
+          {currentPrice === 0 && (
+            <div className="text-yellow-400 text-xs mt-2">
+              ⚠️ Đang tải giá Bitcoin... Vui lòng đợi một chút.
+            </div>
+          )}
         </div>
 
         {portfolio && (
