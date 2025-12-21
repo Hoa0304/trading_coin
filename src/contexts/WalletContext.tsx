@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
   connectWallet,
+  disconnectWallet,
   getCurrentAddress,
   getBalance,
   onAccountsChanged,
@@ -161,10 +162,19 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
     }
   };
 
-  const disconnect = () => {
-    setAddress(null);
-    setBalance('0');
-    setError(null);
+  const disconnect = async () => {
+    try {
+      // Gọi disconnectWallet để thử revoke permissions (nếu được hỗ trợ)
+      await disconnectWallet();
+    } catch (error) {
+      // Ignore errors - chỉ cần clear state
+      console.log('Disconnect note:', error);
+    } finally {
+      // Luôn clear state trong app
+      setAddress(null);
+      setBalance('0');
+      setError(null);
+    }
   };
 
   const refreshBalance = async () => {

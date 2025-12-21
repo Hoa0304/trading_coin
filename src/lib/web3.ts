@@ -118,6 +118,35 @@ export const connectWallet = async (): Promise<string> => {
   }
 };
 
+/**
+ * Đăng xuất khỏi MetaMask wallet
+ * Lưu ý: MetaMask không có API để disconnect hoàn toàn,
+ * nhưng ta có thể yêu cầu user disconnect từ MetaMask UI hoặc chỉ clear state trong app
+ * Khi user disconnect từ MetaMask, event 'accountsChanged' sẽ được trigger với mảng rỗng
+ */
+export const disconnectWallet = async (): Promise<void> => {
+  if (!isMetaMaskInstalled() || !window.ethereum) {
+    return;
+  }
+
+  try {
+    // Thử sử dụng wallet_revokePermissions nếu có (một số wallet hỗ trợ)
+    // MetaMask có thể không hỗ trợ, nhưng không sao vì ta chỉ cần clear state
+    try {
+      await window.ethereum.request({
+        method: 'wallet_revokePermissions',
+        params: [{ eth_accounts: {} }],
+      });
+    } catch {
+      // Nếu không hỗ trợ, không sao - ta vẫn clear state
+      // User có thể disconnect từ MetaMask UI nếu muốn
+    }
+  } catch {
+    // Ignore errors - chỉ cần clear state trong app là đủ
+    console.log('Note: MetaMask may not support wallet_revokePermissions. User can disconnect from MetaMask UI if needed.');
+  }
+};
+
 
 /**
  * Wrapper để handle network errors gracefully

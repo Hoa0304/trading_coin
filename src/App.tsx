@@ -7,7 +7,7 @@ import { PortfolioStats } from './components/PortfolioStats';
 import { TradePanel } from './components/TradePanel';
 import { TransactionHistory } from './components/TransactionHistory';
 import { getPortfolio, getUserTransactions } from './lib/contract';
-import { Bitcoin, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { Bitcoin, Wallet, TrendingUp, TrendingDown, LogOut } from 'lucide-react';
 
 interface BlockchainPortfolio {
   btcBalance: number;
@@ -23,7 +23,7 @@ interface BlockchainTransaction {
 }
 
 function App() {
-  const { address, isConnected, isLoading, formattedAddress, refreshBalance } = useWallet();
+  const { address, isConnected, isLoading, formattedAddress, refreshBalance, disconnect } = useWallet();
   const [portfolio, setPortfolio] = useState<BlockchainPortfolio | null>(null);
   const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
@@ -108,6 +108,14 @@ function App() {
                 <p className="text-gray-400 text-xs">{formattedAddress}</p>
               </div>
             </div>
+            <button
+              onClick={disconnect}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition-all"
+              title="Disconnect Wallet"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Disconnect</span>
+            </button>
           </div>
         </div>
       </header>
