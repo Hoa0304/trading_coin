@@ -1,21 +1,6 @@
 import { ethers } from 'ethers';
 import { getSigner } from './web3';
-
-/**
- * Contract ABI - Simplified version
- * Trong production, nên import từ file JSON sau khi compile
- */
-export const CONTRACT_ABI = [
-  'function initializePortfolio() external',
-  'function buyBitcoin(uint256 btcAmount, uint256 btcPrice) external',
-  'function sellBitcoin(uint256 btcAmount, uint256 btcPrice) external',
-  'function getPortfolio(address user) external view returns (uint256 btcBalance, uint256 usdBalance)',
-  'function getTransactionCount() external view returns (uint256)',
-  'function getTransaction(uint256 index) external view returns (address user, bool isBuy, uint256 btcAmount, uint256 usdAmount, uint256 btcPrice, uint256 timestamp)',
-  'function getUserTransactions(address user) external view returns (uint256[] memory)',
-  'event TradeExecuted(address indexed user, bool isBuy, uint256 btcAmount, uint256 usdAmount, uint256 btcPrice, uint256 timestamp)',
-  'event PortfolioUpdated(address indexed user, uint256 btcBalance, uint256 usdBalance)',
-];
+import { CONTRACT_ABI } from './contractABI';
 
 // Contract address - Sẽ được set sau khi deploy
 // Để test, bạn cần deploy contract lên Sepolia testnet và paste address ở đây

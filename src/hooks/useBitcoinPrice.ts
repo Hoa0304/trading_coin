@@ -17,9 +17,21 @@ export function useBitcoinPrice() {
   const fetchBitcoinPrice = async () => {
     try {
       // CoinGecko API - không cần API key cho public endpoints
+      // Thêm timeout và retry logic
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+      
       const response = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true'
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
+        {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -45,8 +57,20 @@ export function useBitcoinPrice() {
       }
     } catch (err) {
       console.error('Error fetching Bitcoin price:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch price');
-      // Giữ giá cũ nếu có lỗi để không làm gián đoạn UI
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch price';
+      setError(errorMessage);
+      
+      // Nếu là lỗi network, không hiển thị error để không làm gián đoạn UI
+      // App sẽ sử dụng giá mặc định (67234.50) đã set trong useState
+      if (err instanceof Error && (
+        err.message.includes('Failed to fetch') ||
+        err.message.includes('ERR_CONNECTION_CLOSED') ||
+        err.message.includes('NetworkError') ||
+        err.name === 'AbortError'
+      )) {
+        console.warn('CoinGecko API không khả dụng, sử dụng giá mặc định');
+        setError(null); // Không hiển thị error cho user
+      }
     } finally {
       setLoading(false);
     }

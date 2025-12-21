@@ -43,6 +43,12 @@ export default {
     hardhat: {
       chainId: 1337,
     },
+    // Localhost network (khi Hardhat node đang chạy)
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      chainId: 1337,
+      // Hardhat node tự động cung cấp accounts, không cần private key
+    },
   },
   // Etherscan verification
   etherscan: {
