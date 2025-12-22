@@ -13,6 +13,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@web3-storage/access": "^20.3.0",
+    "@web3-storage/capabilities": "^18.1.0",
+    "@web3-storage/w3up-client": "^17.3.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
     "cors": "^2.8.5",

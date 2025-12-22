@@ -244,6 +244,125 @@ app.put('/api/portfolio', authenticateToken, (req, res) => {
   }
 });
 
+// ==================== COINGECKO API PROXY ====================
+// Proxy endpoint để tránh CORS và rate limit issues
+
+// Cache để tránh quá nhiều requests
+let priceCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 10000, // 10 seconds cache
+};
+
+let historyCache = {
+  data: null,
+  timestamp: 0,
+  ttl: 60000, // 60 seconds cache
+};
+
+// Lấy giá Bitcoin hiện tại
+app.get('/api/bitcoin/price', async (req, res) => {
+  try {
+    // Kiểm tra cache
+    const now = Date.now();
+    if (priceCache.data && (now - priceCache.timestamp) < priceCache.ttl) {
+      return res.json(priceCache.data);
+    }
+
+    // Gọi CoinGecko API
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // Nếu rate limit, trả về cache cũ hoặc giá mặc định
+      if (response.status === 429 && priceCache.data) {
+        console.warn('CoinGecko rate limit, returning cached data');
+        return res.json(priceCache.data);
+      }
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Update cache
+    priceCache.data = data;
+    priceCache.timestamp = now;
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching Bitcoin price:', error);
+    
+    // Nếu có cache, trả về cache
+    if (priceCache.data) {
+      console.warn('Returning cached price due to error');
+      return res.json(priceCache.data);
+    }
+    
+    // Fallback giá mặc định
+    res.json({
+      bitcoin: {
+        usd: 67234.50,
+        usd_24h_change: 0,
+      },
+    });
+  }
+});
+
+// Lấy lịch sử giá Bitcoin
+app.get('/api/bitcoin/history', async (req, res) => {
+  try {
+    // Kiểm tra cache
+    const now = Date.now();
+    if (historyCache.data && (now - historyCache.timestamp) < historyCache.ttl) {
+      return res.json(historyCache.data);
+    }
+
+    // Gọi CoinGecko API
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1',
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // Nếu rate limit, trả về cache cũ
+      if (response.status === 429 && historyCache.data) {
+        console.warn('CoinGecko rate limit, returning cached history');
+        return res.json(historyCache.data);
+      }
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Update cache
+    historyCache.data = data;
+    historyCache.timestamp = now;
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching Bitcoin history:', error);
+    
+    // Nếu có cache, trả về cache
+    if (historyCache.data) {
+      console.warn('Returning cached history due to error');
+      return res.json(historyCache.data);
+    }
+    
+    // Fallback empty data
+    res.json({ prices: [] });
+  }
+});
+
 // ==================== TRANSACTION ROUTES ====================
 
 // Lấy transactions

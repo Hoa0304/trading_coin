@@ -1,4 +1,5 @@
-import { ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, ExternalLink, Database, Scan } from 'lucide-react';
+import { getIPFSURL } from '../lib/ipfs';
 
 interface BlockchainTransaction {
   type: 'buy' | 'sell';
@@ -6,6 +7,8 @@ interface BlockchainTransaction {
   usdAmount: number;
   btcPrice: number;
   timestamp: number;
+  ipfsCID: string;
+  transactionHash?: string; // Optional transaction hash for Etherscan link
 }
 
 interface TransactionHistoryProps {
@@ -49,6 +52,36 @@ export function TransactionHistory({ transactions }: TransactionHistoryProps) {
                 <p className="text-gray-400 text-sm">
                   @${tx.btcPrice.toFixed(2)}
                 </p>
+                <div className="flex items-center gap-2 mt-2 justify-end">
+                  {/* Etherscan Link */}
+                  {tx.transactionHash && (
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${tx.transactionHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                      title="View on Etherscan"
+                    >
+                      <Scan className="w-3 h-3" />
+                      Etherscan
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                  {/* IPFS Link */}
+                  {tx.ipfsCID && (
+                    <a
+                      href={getIPFSURL(tx.ipfsCID)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-[#F263B0] hover:text-[#d4559a] transition-colors"
+                      title="View metadata on IPFS"
+                    >
+                      <Database className="w-3 h-3" />
+                      IPFS
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           ))

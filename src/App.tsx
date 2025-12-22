@@ -20,6 +20,8 @@ interface BlockchainTransaction {
   usdAmount: number;
   btcPrice: number;
   timestamp: number;
+  ipfsCID: string;
+  transactionHash?: string; // Optional transaction hash for Etherscan link
 }
 
 function App() {

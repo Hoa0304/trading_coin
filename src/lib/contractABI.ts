@@ -1,7 +1,3 @@
-/**
- * Contract ABI - Imported from Hardhat artifacts
- * This ensures ABI matches the compiled contract exactly
- */
 export const CONTRACT_ABI = [
   {
     "inputs": [],
@@ -71,6 +67,12 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "timestamp",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "ipfsCID",
+        "type": "string"
       }
     ],
     "name": "TradeExecuted",
@@ -87,6 +89,29 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "btcPrice",
         "type": "uint256"
+      }
+    ],
+    "name": "buyBitcoin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "btcAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "btcPrice",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "ipfsCID",
+        "type": "string"
       }
     ],
     "name": "buyBitcoin",
@@ -157,6 +182,11 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "timestamp",
         "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "ipfsCID",
+        "type": "string"
       }
     ],
     "stateMutability": "view",
@@ -236,6 +266,29 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "btcPrice",
         "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "ipfsCID",
+        "type": "string"
+      }
+    ],
+    "name": "sellBitcoin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "btcAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "btcPrice",
+        "type": "uint256"
       }
     ],
     "name": "sellBitcoin",
@@ -282,11 +335,14 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "timestamp",
         "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "ipfsCID",
+        "type": "string"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   }
 ] as const;
-
-

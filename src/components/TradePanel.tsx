@@ -155,12 +155,12 @@ export function TradePanel({ currentPrice, portfolio, address, onTradeComplete }
         }
       }
 
-      // Gọi smart contract
+      // Gọi smart contract (tự động upload metadata lên IPFS)
       let tx;
       if (activeTab === 'buy') {
-        tx = await buyBitcoin(btcAmount, currentPrice);
+        tx = await buyBitcoin(btcAmount, currentPrice, address);
       } else {
-        tx = await sellBitcoin(btcAmount, currentPrice);
+        tx = await sellBitcoin(btcAmount, currentPrice, address);
       }
 
       setTxHash(tx.hash);

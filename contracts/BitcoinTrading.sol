@@ -24,6 +24,7 @@ contract BitcoinTrading {
         uint256 usdAmount;
         uint256 btcPrice;  // Giá BTC tại thời điểm trade (wei)
         uint256 timestamp;
+        string ipfsCID;    // CID của metadata trên IPFS
     }
 
     // Array để lưu transactions
@@ -36,7 +37,8 @@ contract BitcoinTrading {
         uint256 btcAmount,
         uint256 usdAmount,
         uint256 btcPrice,
-        uint256 timestamp
+        uint256 timestamp,
+        string ipfsCID
     );
 
     event PortfolioUpdated(
@@ -65,8 +67,9 @@ contract BitcoinTrading {
      * @dev Mua Bitcoin
      * @param btcAmount Số lượng BTC muốn mua (wei)
      * @param btcPrice Giá BTC hiện tại (wei per BTC)
+     * @param ipfsCID CID của metadata trên IPFS (có thể để rỗng nếu chưa upload)
      */
-    function buyBitcoin(uint256 btcAmount, uint256 btcPrice) external {
+    function buyBitcoin(uint256 btcAmount, uint256 btcPrice, string memory ipfsCID) public {
         require(btcAmount > 0, "BTC amount must be greater than 0");
         require(btcPrice > 0, "BTC price must be greater than 0");
 
@@ -80,26 +83,37 @@ contract BitcoinTrading {
         portfolios[msg.sender].btcBalance += btcAmount;
         portfolios[msg.sender].usdBalance -= usdAmount;
 
-        // Lưu transaction
+        // Lưu transaction với IPFS CID
         transactions.push(Transaction({
             user: msg.sender,
             isBuy: true,
             btcAmount: btcAmount,
             usdAmount: usdAmount,
             btcPrice: btcPrice,
-            timestamp: block.timestamp
+            timestamp: block.timestamp,
+            ipfsCID: ipfsCID
         }));
 
-        emit TradeExecuted(msg.sender, true, btcAmount, usdAmount, btcPrice, block.timestamp);
+        emit TradeExecuted(msg.sender, true, btcAmount, usdAmount, btcPrice, block.timestamp, ipfsCID);
         emit PortfolioUpdated(msg.sender, portfolios[msg.sender].btcBalance, portfolios[msg.sender].usdBalance);
+    }
+
+    /**
+     * @dev Mua Bitcoin (backward compatibility - không có CID)
+     * @param btcAmount Số lượng BTC muốn mua (wei)
+     * @param btcPrice Giá BTC hiện tại (wei per BTC)
+     */
+    function buyBitcoin(uint256 btcAmount, uint256 btcPrice) external {
+        buyBitcoin(btcAmount, btcPrice, "");
     }
 
     /**
      * @dev Bán Bitcoin
      * @param btcAmount Số lượng BTC muốn bán (wei)
      * @param btcPrice Giá BTC hiện tại (wei per BTC)
+     * @param ipfsCID CID của metadata trên IPFS (có thể để rỗng nếu chưa upload)
      */
-    function sellBitcoin(uint256 btcAmount, uint256 btcPrice) external {
+    function sellBitcoin(uint256 btcAmount, uint256 btcPrice, string memory ipfsCID) public {
         require(btcAmount > 0, "BTC amount must be greater than 0");
         require(btcPrice > 0, "BTC price must be greater than 0");
 
@@ -113,18 +127,28 @@ contract BitcoinTrading {
         portfolios[msg.sender].btcBalance -= btcAmount;
         portfolios[msg.sender].usdBalance += usdAmount;
 
-        // Lưu transaction
+        // Lưu transaction với IPFS CID
         transactions.push(Transaction({
             user: msg.sender,
             isBuy: false,
             btcAmount: btcAmount,
             usdAmount: usdAmount,
             btcPrice: btcPrice,
-            timestamp: block.timestamp
+            timestamp: block.timestamp,
+            ipfsCID: ipfsCID
         }));
 
-        emit TradeExecuted(msg.sender, false, btcAmount, usdAmount, btcPrice, block.timestamp);
+        emit TradeExecuted(msg.sender, false, btcAmount, usdAmount, btcPrice, block.timestamp, ipfsCID);
         emit PortfolioUpdated(msg.sender, portfolios[msg.sender].btcBalance, portfolios[msg.sender].usdBalance);
+    }
+
+    /**
+     * @dev Bán Bitcoin (backward compatibility - không có CID)
+     * @param btcAmount Số lượng BTC muốn bán (wei)
+     * @param btcPrice Giá BTC hiện tại (wei per BTC)
+     */
+    function sellBitcoin(uint256 btcAmount, uint256 btcPrice) external {
+        sellBitcoin(btcAmount, btcPrice, "");
     }
 
     /**
@@ -150,11 +174,12 @@ contract BitcoinTrading {
         uint256 btcAmount,
         uint256 usdAmount,
         uint256 btcPrice,
-        uint256 timestamp
+        uint256 timestamp,
+        string memory ipfsCID
     ) {
         require(index < transactions.length, "Transaction index out of bounds");
-        Transaction memory tx = transactions[index];
-        return (tx.user, tx.isBuy, tx.btcAmount, tx.usdAmount, tx.btcPrice, tx.timestamp);
+        Transaction memory transaction = transactions[index];
+        return (transaction.user, transaction.isBuy, transaction.btcAmount, transaction.usdAmount, transaction.btcPrice, transaction.timestamp, transaction.ipfsCID);
     }
 
     /**

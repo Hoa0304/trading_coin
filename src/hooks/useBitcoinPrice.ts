@@ -13,16 +13,17 @@ export function useBitcoinPrice() {
 
   /**
    * Lấy giá Bitcoin hiện tại và thay đổi 24h từ CoinGecko API
+   * Sử dụng proxy endpoint để tránh CORS và rate limit
    */
   const fetchBitcoinPrice = async () => {
     try {
-      // CoinGecko API - không cần API key cho public endpoints
-      // Thêm timeout và retry logic
+      // Sử dụng proxy endpoint từ backend server
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
       
       const response = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
+        `${API_URL}/api/bitcoin/price`,
         {
           signal: controller.signal,
           headers: {
@@ -99,14 +100,14 @@ export function useBitcoinPrice() {
 
   /**
    * Lấy lịch sử giá 24h từ CoinGecko (để hiển thị biểu đồ)
-   * Nếu API yêu cầu key, sẽ tạo dữ liệu mẫu dựa trên giá hiện tại
+   * Sử dụng proxy endpoint để tránh CORS và rate limit
    */
   const fetchPriceHistory = async () => {
     try {
-      // Thử dùng endpoint đơn giản hơn không cần API key
-      // Endpoint này có thể không có interval=hourly nhưng vẫn lấy được data
+      // Sử dụng proxy endpoint từ backend server
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const response = await fetch(
-        'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1'
+        `${API_URL}/api/bitcoin/history`
       );
 
       if (!response.ok) {
@@ -148,11 +149,10 @@ export function useBitcoinPrice() {
       fetchPriceHistory();
     });
 
-    // Cập nhật giá mỗi 30 giây để tránh rate limit
-    // CoinGecko free tier: 10-50 calls/phút
+    // Cập nhật giá mỗi 15 giây (proxy server có cache 10s)
     const interval = setInterval(() => {
       fetchBitcoinPrice();
-    }, 30000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, []);
